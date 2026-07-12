@@ -32,6 +32,9 @@ const client = new MongoClient(uri, {
 
 let db: Db;
 let doctorsCollection: Collection;
+let usersCollection: Collection;
+let reviewsCollection: Collection;
+let bookmarksCollection: Collection;
 let appointmentsCollection: Collection;
 
 // db connection function
@@ -44,6 +47,9 @@ async function connectDB() {
         db = client.db("hospital-management");
         doctorsCollection = db.collection("doctor");
         appointmentsCollection = db.collection("appointments");
+        usersCollection = db.collection("users");
+        reviewsCollection = db.collection("reviews");
+        bookmarksCollection = db.collection("bookmarks");
 
     } catch (error) {
         console.error("❌ MongoDB connection error:", error);
@@ -97,8 +103,8 @@ app.patch("/api/doctors/approve/:id", async (req, res) => {
     try {
         const id = req.params.id;
         const result = await doctorsCollection.updateOne(
-            {_id:new ObjectId(id)},
-            {$set:{status:"approved"}}
+            { _id: new ObjectId(id) },
+            { $set: { status: "approved" } }
         )
         res.send(result);
     } catch (error: any) {
@@ -123,6 +129,109 @@ app.delete("/api/doctors/:id", async (req, res) => {
     }
 
 })
+
+
+
+
+// Get single doctor by id: view details er jonou
+
+app.get("/api/doctors/:id", async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await doctorsCollection.findOne(query);
+    res.send(result);
+})
+
+
+
+
+
+// ---------- REVIEWS ----------
+
+// Add a review
+
+app.post("/api/reviews", async (req, res) => {
+    try {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+})
+
+
+// // Get all reviews for a specific doctor
+
+app.get("/api/reviews/:doctorId", async (req, res) => {
+    try {
+        const doctorId = req.params.doctorId;
+        const result = await reviewsCollection.find({ doctorId }).sort({ createdAt: -1 }).toArray();
+        res.send(result);
+    } catch (error:any) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+})
+
+
+
+
+
+
+
+
+
+
+  // ---------- BOOKMARKS ----------
+
+        // Add a bookmark
+
+
+        app.post("/api/bookmarks", async (req, res) => {
+            try {
+                const bookmark = req.body;
+
+                const exists = await bookmarksCollection.findOne({
+                    doctorId: bookmark.doctorId,
+                    userEmail: bookmark.userEmail,
+                });
+
+                if (exists) {
+                    return res.status(409).send({ success: false, message: "Already bookmarked" });
+                }
+
+                bookmark.createdAt = new Date();
+                const result = await bookmarksCollection.insertOne(bookmark);
+                res.send(result);
+            } catch (error:any) {
+                res.status(500).send({ success: false, message: error.message });
+            }
+        })
+
+
+        // Get all bookmarks for a user
+        app.get("/api/bookmarks/:userEmail", async (req, res) => {
+            try {
+                const userEmail = req.params.userEmail;
+                const result = await bookmarksCollection.find({ userEmail }).toArray();
+                res.send(result);
+            } catch (error:any) {
+                res.status(500).send({ success: false, message: error.message });
+            }
+        });
+
+        // Remove a bookmark
+        app.delete("/api/bookmarks/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await bookmarksCollection.deleteOne({ _id: new ObjectId(id) });
+                res.send(result);
+            } catch (error: any) {
+                res.status(500).send({ success: false, message: error.message });
+            }
+        });
+
+
 
 // server listen
 app.listen(PORT, () => {
