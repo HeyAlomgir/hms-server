@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { MongoClient, ServerApiVersion, Db, Collection } from 'mongodb';
+import { MongoClient, ServerApiVersion, Db, Collection, ObjectId } from 'mongodb';
 
 // env configuration
 dotenv.config();
@@ -60,7 +60,25 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 
-app.get('/api/doctors', async (req: Request, res: Response) => {
+
+
+
+// post doctor
+app.post("/api/doctors", async (req, res) => {
+    try {
+        const doctor = req.body;
+        const result = await doctorsCollection.insertOne(doctor);
+        res.send(result)
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message })
+    }
+})
+
+
+
+
+// get all doctor
+app.get('/api/doctors', async (req, res) => {
     try {
         const result = await doctorsCollection.find().toArray();
         res.send(result);
@@ -68,6 +86,43 @@ app.get('/api/doctors', async (req: Request, res: Response) => {
         res.status(500).send({ success: false, message: error.message });
     }
 });
+
+
+
+
+
+// doctor approve
+
+app.patch("/api/doctors/approve/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const result = await doctorsCollection.updateOne(
+            {_id:new ObjectId(id)},
+            {$set:{status:"approved"}}
+        )
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message })
+    }
+})
+
+
+
+
+
+// doctor delete
+
+app.delete("/api/doctors/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await doctorsCollection.deleteOne(query);
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message })
+    }
+
+})
 
 // server listen
 app.listen(PORT, () => {
