@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { MongoClient, ServerApiVersion, Db, Collection, ObjectId } from 'mongodb';
+import Stripe from 'stripe';
 
 // env configuration
 dotenv.config();
@@ -168,7 +169,7 @@ app.get("/api/reviews/:doctorId", async (req, res) => {
         const doctorId = req.params.doctorId;
         const result = await reviewsCollection.find({ doctorId }).sort({ createdAt: -1 }).toArray();
         res.send(result);
-    } catch (error:any) {
+    } catch (error: any) {
         res.status(500).send({ success: false, message: error.message });
     }
 })
@@ -182,54 +183,119 @@ app.get("/api/reviews/:doctorId", async (req, res) => {
 
 
 
-  // ---------- BOOKMARKS ----------
+// ---------- BOOKMARKS ----------
 
-        // Add a bookmark
-
-
-        app.post("/api/bookmarks", async (req, res) => {
-            try {
-                const bookmark = req.body;
-
-                const exists = await bookmarksCollection.findOne({
-                    doctorId: bookmark.doctorId,
-                    userEmail: bookmark.userEmail,
-                });
-
-                if (exists) {
-                    return res.status(409).send({ success: false, message: "Already bookmarked" });
-                }
-
-                bookmark.createdAt = new Date();
-                const result = await bookmarksCollection.insertOne(bookmark);
-                res.send(result);
-            } catch (error:any) {
-                res.status(500).send({ success: false, message: error.message });
-            }
-        })
+// Add a bookmark
 
 
-        // Get all bookmarks for a user
-        app.get("/api/bookmarks/:userEmail", async (req, res) => {
-            try {
-                const userEmail = req.params.userEmail;
-                const result = await bookmarksCollection.find({ userEmail }).toArray();
-                res.send(result);
-            } catch (error:any) {
-                res.status(500).send({ success: false, message: error.message });
-            }
+app.post("/api/bookmarks", async (req, res) => {
+    try {
+        const bookmark = req.body;
+
+        const exists = await bookmarksCollection.findOne({
+            doctorId: bookmark.doctorId,
+            userEmail: bookmark.userEmail,
         });
 
-        // Remove a bookmark
-        app.delete("/api/bookmarks/:id", async (req, res) => {
-            try {
-                const id = req.params.id;
-                const result = await bookmarksCollection.deleteOne({ _id: new ObjectId(id) });
-                res.send(result);
-            } catch (error: any) {
-                res.status(500).send({ success: false, message: error.message });
-            }
+        if (exists) {
+            return res.status(409).send({ success: false, message: "Already bookmarked" });
+        }
+
+        bookmark.createdAt = new Date();
+        const result = await bookmarksCollection.insertOne(bookmark);
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+})
+
+
+// Get all bookmarks for a user
+app.get("/api/bookmarks/:userEmail", async (req, res) => {
+    try {
+        const userEmail = req.params.userEmail;
+        const result = await bookmarksCollection.find({ userEmail }).toArray();
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+});
+
+// Remove a bookmark
+app.delete("/api/bookmarks/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const result = await bookmarksCollection.deleteOne({ _id: new ObjectId(id) });
+        res.send(result);
+    } catch (error: any) {
+        res.status(500).send({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
+
+
+
+
+//             stripe A 2 Z
+
+
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: "2024-06-20" as any,
+});
+
+
+
+app.post("/api/create-payment-intent", async (req: Request, res: Response) => {
+    try {
+        const { amount } = req.body;
+
+         if (!amount || isNaN(amount)) {
+            return res.status(400).json({ success: false, message: "Valid amount is required" });
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100), // cents
+            currency: "usd",
         });
+
+        res.send({
+            clientSecret: paymentIntent.client_secret,
+        });
+    } catch (error:any) {
+        res.status(500).json({ error });
+    }
+});
+
+
+
+
+
+
+// appoinment
+
+app.post("/api/appointments", async (req: Request, res: Response) => {
+    try {
+        const appointment = {
+            ...req.body,
+            status: "pending",
+            createdAt: new Date(),
+        };
+
+        const result = await appointmentsCollection.insertOne(appointment);
+
+        res.json({
+            success: true,
+            data: result,
+        });
+    } catch (error:any) {
+        res.status(500).json({ error });
+    }
+});
 
 
 
