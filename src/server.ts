@@ -582,7 +582,7 @@ app.patch("/api/doctors/update/:id", async (req: Request, res: Response) => {
             { $set: updateFields }
         );
 
-        
+
         const doctorDoc = await doctorsCollection.findOne({ _id: new ObjectId(id) });
         if (doctorDoc?.userId) {
             const userUpdateFields: Record<string, any> = {};
@@ -708,46 +708,46 @@ app.patch("/api/patients/:id/ban", async (req: Request, res: Response) => {
 app.get("/api/all-appointments", async (req: Request, res: Response) => {
     try {
         const result = await appointmentsCollection.aggregate([
-  {
-    $addFields: {
-      doctorObjectId: {
-        $convert: {
-          input: "$doctorId",
-          to: "objectId",
-          onError: null,
-          onNull: null
-        }
-      },
-      patientObjectId: {
-        $convert: {
-          input: "$patientId",
-          to: "objectId",
-          onError: null,
-          onNull: null
-        }
-      }
-    }
-  },
-  {
-    $lookup: {
-      from: "doctor",
-      localField: "doctorObjectId",
-      foreignField: "_id",
-      as: "doctorDetails"
-    }
-  },
-  {
-    $lookup: {
-      from: "user",
-      localField: "patientObjectId",
-      foreignField: "_id",
-      as: "patientDetails"
-    }
-  },
-  { $unwind: { path: "$doctorDetails", preserveNullAndEmptyArrays: true } },
-  { $unwind: { path: "$patientDetails", preserveNullAndEmptyArrays: true } },
-  { $sort: { createdAt: -1 } }
-]).toArray();
+            {
+                $addFields: {
+                    doctorObjectId: {
+                        $convert: {
+                            input: "$doctorId",
+                            to: "objectId",
+                            onError: null,
+                            onNull: null
+                        }
+                    },
+                    patientObjectId: {
+                        $convert: {
+                            input: "$patientId",
+                            to: "objectId",
+                            onError: null,
+                            onNull: null
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "doctor",
+                    localField: "doctorObjectId",
+                    foreignField: "_id",
+                    as: "doctorDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "user",
+                    localField: "patientObjectId",
+                    foreignField: "_id",
+                    as: "patientDetails"
+                }
+            },
+            { $unwind: { path: "$doctorDetails", preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: "$patientDetails", preserveNullAndEmptyArrays: true } },
+            { $sort: { createdAt: -1 } }
+        ]).toArray();
 
         res.json({ success: true, data: result });
     } catch (error: any) {
@@ -772,6 +772,55 @@ app.patch("/api/all-appointments/:id/status", async (req: Request, res: Response
         );
 
         res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+// ---------- ADMIN ANALYTICS ----------
+
+app.get("/api/admin-analytics", async (req: Request, res: Response) => {
+    try {
+        // total counts
+        const totalPatients = await usersCollection.countDocuments({ role: "patient" });
+        const totalDoctors = await doctorsCollection.countDocuments();
+        const totalAppointments = await appointmentsCollection.countDocuments();
+
+        // appointment status stats
+        const statusStats = await appointmentsCollection.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                }
+            }
+        ]).toArray();
+
+        // monthly appointments
+        const monthlyStats = await appointmentsCollection.aggregate([
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id": 1 } }
+        ]).toArray();
+
+        res.json({
+            success: true,
+            data: {
+                totalPatients,
+                totalDoctors,
+                totalAppointments,
+                statusStats,
+                monthlyStats
+            }
+        });
+
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
