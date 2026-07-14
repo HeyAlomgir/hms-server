@@ -697,6 +697,90 @@ app.patch("/api/patients/:id/ban", async (req: Request, res: Response) => {
 
 
 
+
+
+
+
+
+
+// ---------- ADMIN: ALL APPOINTMENTS ----------
+
+app.get("/api/all-appointments", async (req: Request, res: Response) => {
+    try {
+        const result = await appointmentsCollection.aggregate([
+  {
+    $addFields: {
+      doctorObjectId: {
+        $convert: {
+          input: "$doctorId",
+          to: "objectId",
+          onError: null,
+          onNull: null
+        }
+      },
+      patientObjectId: {
+        $convert: {
+          input: "$patientId",
+          to: "objectId",
+          onError: null,
+          onNull: null
+        }
+      }
+    }
+  },
+  {
+    $lookup: {
+      from: "doctor",
+      localField: "doctorObjectId",
+      foreignField: "_id",
+      as: "doctorDetails"
+    }
+  },
+  {
+    $lookup: {
+      from: "user",
+      localField: "patientObjectId",
+      foreignField: "_id",
+      as: "patientDetails"
+    }
+  },
+  { $unwind: { path: "$doctorDetails", preserveNullAndEmptyArrays: true } },
+  { $unwind: { path: "$patientDetails", preserveNullAndEmptyArrays: true } },
+  { $sort: { createdAt: -1 } }
+]).toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// admin manually cancel/update any appointment status
+app.patch("/api/all-appointments/:id/status", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const allowedStatuses = ["pending", "approved", "completed", "rejected", "cancelled"];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: "Invalid status value" });
+        }
+
+        const result = await appointmentsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status, updatedAt: new Date() } }
+        );
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
 // server listen
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
