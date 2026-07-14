@@ -48,7 +48,7 @@ async function connectDB() {
         db = client.db("hospital-management");
         doctorsCollection = db.collection("doctor");
         appointmentsCollection = db.collection("appointments");
-        usersCollection = db.collection("users");
+        usersCollection = db.collection("user");
         reviewsCollection = db.collection("reviews");
         bookmarksCollection = db.collection("bookmarks");
 
@@ -70,16 +70,22 @@ app.get('/', (req: Request, res: Response) => {
 
 
 
-// post doctor
-app.post("/api/doctors", async (req, res) => {
+// post doctor 
+app.post("/api/doctors", async (req: Request, res: Response) => {
     try {
-        const doctor = req.body;
-        const result = await doctorsCollection.insertOne(doctor);
-        res.send(result)
+        const doctor = req.body; 
+
+        const doctorResult = await doctorsCollection.insertOne({
+            ...doctor,
+            status: "pending",
+            createdAt: new Date()
+        });
+
+        res.send({ success: true, doctorResult });
     } catch (error: any) {
-        res.status(500).send({ success: false, message: error.message })
+        res.status(500).send({ success: false, message: error.message });
     }
-})
+});
 
 
 
@@ -254,7 +260,7 @@ app.post("/api/create-payment-intent", async (req: Request, res: Response) => {
     try {
         const { amount } = req.body;
 
-         if (!amount || isNaN(amount)) {
+        if (!amount || isNaN(amount)) {
             return res.status(400).json({ success: false, message: "Valid amount is required" });
         }
 
@@ -266,7 +272,7 @@ app.post("/api/create-payment-intent", async (req: Request, res: Response) => {
         res.send({
             clientSecret: paymentIntent.client_secret,
         });
-    } catch (error:any) {
+    } catch (error: any) {
         res.status(500).json({ error });
     }
 });
@@ -292,10 +298,67 @@ app.post("/api/appointments", async (req: Request, res: Response) => {
             success: true,
             data: result,
         });
-    } catch (error:any) {
+    } catch (error: any) {
         res.status(500).json({ error });
     }
 });
+
+
+
+
+
+
+// ---------- USER DASHBOARD ----------
+
+// Get all appointments with doctor details for a specific user
+
+app.get("/api/my-appointments/:userId", async (req: Request, res: Response) => {
+    try {
+        const userId = req.params.userId;
+
+        const result = await appointmentsCollection.aggregate([
+            {
+                $match: { patientId: userId }
+            },
+            {
+                // 🔥 string → ObjectId convert
+                $addFields: {
+                    doctorObjectId: { $toObjectId: "$doctorId" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "doctor",
+                    localField: "doctorObjectId",
+                    foreignField: "_id",
+                    as: "doctorDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$doctorDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            }
+        ]).toArray();
+
+        res.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+
 
 
 
