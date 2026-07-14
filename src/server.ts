@@ -73,7 +73,7 @@ app.get('/', (req: Request, res: Response) => {
 // post doctor 
 app.post("/api/doctors", async (req: Request, res: Response) => {
     try {
-        const doctor = req.body; 
+        const doctor = req.body;
 
         const doctorResult = await doctorsCollection.insertOne({
             ...doctor,
@@ -431,6 +431,150 @@ app.patch("/api/appointments/:id/status", async (req: Request, res: Response) =>
         const result = await appointmentsCollection.updateOne(
             { _id: new ObjectId(id) },
             { $set: { status, updatedAt: new Date() } }
+        );
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+// ---------- DOCTOR ANALYTICS ----------
+
+app.get("/api/doctor-stats/:doctorId", async (req: Request, res: Response) => {
+    try {
+        const { doctorId } = req.params;
+
+        // doctor review
+        const doctor = await doctorsCollection.findOne({ _id: new ObjectId(doctorId) });
+        const fee = Number(doctor?.consultationFee) || 0;
+
+        // ১. Status breakdown (pending/approved/completed/rejected)
+        const statusAgg = await appointmentsCollection.aggregate([
+            { $match: { doctorId } },
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]).toArray();
+
+        const statusCounts = { pending: 0, approved: 0, completed: 0, rejected: 0 };
+        statusAgg.forEach((s: any) => {
+            if (statusCounts.hasOwnProperty(s._id)) {
+                statusCounts[s._id as keyof typeof statusCounts] = s.count;
+            }
+        });
+
+        const totalAppointments = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+
+        // latest 14 days in
+        const fourteenDaysAgo = new Date();
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
+        fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+        const trendAgg = await appointmentsCollection.aggregate([
+            { $match: { doctorId, createdAt: { $gte: fourteenDaysAgo } } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]).toArray();
+
+        // all 14 days fill
+        const trendMap = new Map(trendAgg.map((t: any) => [t._id, t.count]));
+        const appointmentsOverTime = [];
+        for (let i = 0; i < 14; i++) {
+            const d = new Date(fourteenDaysAgo);
+            d.setDate(d.getDate() + i);
+            const key = d.toISOString().split("T")[0];
+            appointmentsOverTime.push({
+                date: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+                count: trendMap.get(key) || 0
+            });
+        }
+
+        // ৩. Review/rating summary
+        const reviews = await reviewsCollection.find({ doctorId }).toArray();
+        const totalReviews = reviews.length;
+        const avgRating = totalReviews
+            ? Number((reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews).toFixed(1))
+            : 0;
+
+        const ratingDistribution = [1, 2, 3, 4, 5].map((star) => ({
+            star: `${star}★`,
+            count: reviews.filter((r: any) => r.rating === star).length
+        }));
+
+        // ৪. Bookmark count
+        const bookmarkCount = await bookmarksCollection.countDocuments({ doctorId });
+
+        // ৫. Revenue estimate (completed appointment × fee)
+        const revenueEstimate = statusCounts.completed * fee;
+
+        res.json({
+            success: true,
+            data: {
+                totalAppointments,
+                statusCounts,
+                appointmentsOverTime,
+                avgRating,
+                totalReviews,
+                ratingDistribution,
+                bookmarkCount,
+                revenueEstimate,
+                consultationFee: fee,
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+// doctor profile update (for doctor me  edit)
+app.patch("/api/doctors/update/:id", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            specialization,
+            degree,
+            description,
+            image,
+            consultationFee,
+            workingDays,
+            startTime,
+            endTime,
+            maxAppointments,
+            consultationType,
+        } = req.body;
+
+        const updateFields: Record<string, any> = {
+            name,
+            specialization,
+            degree,
+            description,
+            image,
+            consultationFee,
+            workingDays,
+            startTime,
+            endTime,
+            maxAppointments,
+            consultationType,
+            updatedAt: new Date(),
+        };
+
+        // undefined 
+        Object.keys(updateFields).forEach((key) => {
+            if (updateFields[key] === undefined) delete updateFields[key];
+        });
+
+        const result = await doctorsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateFields }
         );
 
         res.json({ success: true, data: result });
