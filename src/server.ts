@@ -534,7 +534,11 @@ app.get("/api/doctor-stats/:doctorId", async (req: Request, res: Response) => {
 
 
 
+
+
+
 // doctor profile update (for doctor me  edit)
+
 app.patch("/api/doctors/update/:id", async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -572,9 +576,115 @@ app.patch("/api/doctors/update/:id", async (req: Request, res: Response) => {
             if (updateFields[key] === undefined) delete updateFields[key];
         });
 
+        // ১. doctor collection update
         const result = await doctorsCollection.updateOne(
             { _id: new ObjectId(id) },
             { $set: updateFields }
+        );
+
+        
+        const doctorDoc = await doctorsCollection.findOne({ _id: new ObjectId(id) });
+        if (doctorDoc?.userId) {
+            const userUpdateFields: Record<string, any> = {};
+            if (name !== undefined) userUpdateFields.name = name;
+            if (image !== undefined) userUpdateFields.image = image;
+
+            if (Object.keys(userUpdateFields).length > 0) {
+                await usersCollection.updateOne(
+                    { _id: new ObjectId(doctorDoc.userId) },
+                    { $set: userUpdateFields }
+                );
+            }
+        }
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+// ---------- ADMIN: PATIENT MANAGEMENT ----------
+
+// all patient in appoinmet added
+app.get("/api/patients", async (req: Request, res: Response) => {
+    try {
+        const result = await usersCollection.aggregate([
+            { $match: { role: "patient" } },
+            {
+                $lookup: {
+                    from: "appointments",
+                    let: { uid: { $toString: "$_id" } },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ["$patientId", "$$uid"] } } }
+                    ],
+                    as: "appointments"
+                }
+            },
+            {
+                $addFields: {
+                    appointmentCount: { $size: "$appointments" }
+                }
+            },
+            {
+                $project: {
+                    appointments: 0
+                }
+            },
+            { $sort: { createdAt: -1 } }
+        ]).toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// specific appointmest history
+app.get("/api/patients/:id/appointments", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const result = await appointmentsCollection.aggregate([
+            { $match: { patientId: id } },
+            {
+                $addFields: {
+                    doctorObjectId: { $toObjectId: "$doctorId" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "doctor",
+                    localField: "doctorObjectId",
+                    foreignField: "_id",
+                    as: "doctorDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$doctorDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            { $sort: { createdAt: -1 } }
+        ]).toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Patient ban / unban toggle
+app.patch("/api/patients/:id/ban", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { banned } = req.body;
+
+        const result = await usersCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { banned: !!banned } }
         );
 
         res.json({ success: true, data: result });
