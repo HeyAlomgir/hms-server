@@ -360,6 +360,87 @@ app.get("/api/my-appointments/:userId", async (req: Request, res: Response) => {
 
 
 
+// ---------- DOCTOR DASHBOARD ----------
+
+// doctor profile 
+app.get("/api/doctors/by-user/:userId", async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const doctor = await doctorsCollection.findOne({ userId });
+
+        if (!doctor) {
+            return res.status(404).json({ success: false, message: "Doctor profile not found" });
+        }
+
+        res.json({ success: true, data: doctor });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+app.get("/api/doctor-appointments/:doctorId", async (req: Request, res: Response) => {
+    try {
+        const { doctorId } = req.params;
+
+        const result = await appointmentsCollection.aggregate([
+            {
+                $match: { doctorId }
+            },
+            {
+                $addFields: {
+                    patientObjectId: { $toObjectId: "$patientId" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "user",
+                    localField: "patientObjectId",
+                    foreignField: "_id",
+                    as: "patientDetails"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$patientDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            }
+        ]).toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// appointment status update (approve / reject / complete)
+app.patch("/api/appointments/:id/status", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const allowedStatuses = ["approved", "rejected", "completed", "pending"];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({ success: false, message: "Invalid status value" });
+        }
+
+        const result = await appointmentsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status, updatedAt: new Date() } }
+        );
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
 
 
 // server listen
