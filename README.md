@@ -94,7 +94,7 @@ hms-client/               # Next.js frontend
 │   └── middleware.ts            # Route protection
 
 hms-server/                # Express backend
-└── server.ts                # All API routes (doctors, appointments, reviews, bookmarks, stats)
+└── index.ts                # All API routes (doctors, appointments, reviews, bookmarks, stats)
 ```
 
 ---
