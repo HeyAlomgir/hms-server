@@ -830,6 +830,126 @@ app.get("/api/admin-analytics", async (req: Request, res: Response) => {
 
 
 
+
+
+// ---------- HOME PAGE: TOP RATED DOCTORS ----------
+
+app.get("/api/top-doctors", async (req: Request, res: Response) => {
+    try {
+        const result = await reviewsCollection.aggregate([
+            {
+                $group: {
+                    _id: "$doctorId",
+                    avgRating: { $avg: "$rating" },
+                    totalReviews: { $sum: 1 }
+                }
+            },
+            { $sort: { avgRating: -1, totalReviews: -1 } },
+            { $limit: 6 },
+            {
+                $addFields: {
+                    doctorObjectId: { $toObjectId: "$_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "doctor",
+                    localField: "doctorObjectId",
+                    foreignField: "_id",
+                    as: "doctorInfo"
+                }
+            },
+            { $unwind: "$doctorInfo" },
+            {
+                $match: { "doctorInfo.status": "approved" }
+            },
+            {
+                $project: {
+                    _id: "$doctorInfo._id",
+                    name: "$doctorInfo.name",
+                    image: "$doctorInfo.image",
+                    specialization: "$doctorInfo.specialization",
+                    consultationFee: "$doctorInfo.consultationFee",
+                    startTime: "$doctorInfo.startTime",
+                    endTime: "$doctorInfo.endTime",
+                    avgRating: { $round: ["$avgRating", 1] },
+                    totalReviews: 1
+                }
+            }
+        ]).toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+// totalpatients
+
+
+app.get("/api/admin-analytics", async (req: Request, res: Response) => {
+    try {
+        const totalPatients = await usersCollection.countDocuments({ role: "patient" });
+        const totalDoctors = await doctorsCollection.countDocuments();
+        const totalAppointments = await appointmentsCollection.countDocuments();
+
+        //  — platform-wide average rating
+        const allReviews = await reviewsCollection.find().toArray();
+        const avgRating = allReviews.length
+            ? Number((allReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / allReviews.length).toFixed(1))
+            : 0;
+
+        const statusStats = await appointmentsCollection.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]).toArray();
+
+        const monthlyStats = await appointmentsCollection.aggregate([
+            { $group: { _id: { $month: "$createdAt" }, count: { $sum: 1 } } },
+            { $sort: { "_id": 1 } }
+        ]).toArray();
+
+        res.json({
+            success: true,
+            data: {
+                totalPatients,
+                totalDoctors,
+                totalAppointments,
+                avgRating,          
+                statusStats,
+                monthlyStats
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+// ---------- HOME PAGE: TESTIMONIALS ----------
+
+app.get("/api/testimonials", async (req: Request, res: Response) => {
+    try {
+        const result = await reviewsCollection
+            .find({ rating: { $gte: 4 }, comment: { $exists: true, $ne: "" } })
+            .sort({ createdAt: -1 })
+            .limit(8)
+            .toArray();
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
 // server listen
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
