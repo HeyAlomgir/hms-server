@@ -19,7 +19,7 @@ const uri = process.env.MONGO_URI;
 
 if (!uri) {
     console.error("❌ Error: MONGO_URI is not defined in .env file!");
-    process.exit(1);
+
 }
 
 const client = new MongoClient(uri, {
@@ -39,7 +39,9 @@ let bookmarksCollection: Collection;
 let appointmentsCollection: Collection;
 
 // db connection function
+let isConnected = false;
 async function connectDB() {
+    if (isConnected) return;
     try {
         await client.connect();
         console.log("🏥 CarePulse Database Successfully Connected to MongoDB Atlas! 🎉");
@@ -51,12 +53,20 @@ async function connectDB() {
         usersCollection = db.collection("user");
         reviewsCollection = db.collection("reviews");
         bookmarksCollection = db.collection("bookmarks");
+        isConnected = true;
 
     } catch (error) {
         console.error("❌ MongoDB connection error:", error);
     }
 }
-connectDB();
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Database connection failed" });
+    }
+});
 
 // basic route
 app.get('/', (req: Request, res: Response) => {
@@ -917,7 +927,7 @@ app.get("/api/admin-analytics", async (req: Request, res: Response) => {
                 totalPatients,
                 totalDoctors,
                 totalAppointments,
-                avgRating,          
+                avgRating,
                 statusStats,
                 monthlyStats
             }
@@ -949,7 +959,7 @@ app.get("/api/testimonials", async (req: Request, res: Response) => {
 
 
 
-// Local development-এই শুধু listen করবে, Vercel-এ না
+
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
