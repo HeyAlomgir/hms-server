@@ -22,7 +22,7 @@ if (!uri) {
 
 }
 
-const client = new MongoClient(uri, {
+const client = new MongoClient(uri as string, {
     serverApi: {
         version: ServerApiVersion.v1,
         strict: true,
