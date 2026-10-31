@@ -100,19 +100,13 @@ app.post("/api/doctors", async (req: Request, res: Response) => {
 
 
 
-// Get only approved doctors for public pages
-app.get("/api/doctors", async (req: Request, res: Response) => {
+// get all doctor
+app.get('/api/doctors', async (req, res) => {
     try {
-        const result = await doctorsCollection
-            .find({ status: "approved" })
-            .toArray();
-
-        res.status(200).json(result);
+        const result = await doctorsCollection.find().toArray();
+        res.send(result);
     } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(500).send({ success: false, message: error.message });
     }
 });
 
