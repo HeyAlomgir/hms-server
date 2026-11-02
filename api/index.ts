@@ -101,14 +101,107 @@ app.post("/api/doctors", async (req: Request, res: Response) => {
 
 
 // get all doctor
-app.get('/api/doctors', async (req, res) => {
+
+// GET DOCTORS
+// app.get('/api/doctors', async (req: Request, res: Response) => {
+//     try {
+//         const { status } = req.query;
+
+//         let filter: Record<string, any> = {};
+
+//         // Filter doctors by status
+//         if (status === "approved") {
+//             filter = {
+//                 $or: [
+//                     { status: "approved" },
+//                     { status: { $exists: false } }
+//                 ]
+//             };
+//         } else if (
+//             status === "pending" ||
+//             status === "rejected"
+//         ) {
+//             filter = { status };
+//         } else if (
+//             status !== undefined &&
+//             status !== "all"
+//         ) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid doctor status"
+//             });
+//         }
+
+//         const result = await doctorsCollection
+//             .find(filter)
+//             .sort({ createdAt: -1 })
+//             .toArray();
+
+//         // Keep the previous response format (Array)
+//         res.status(200).json(result);
+
+//     } catch (error: any) {
+//         console.error("Get doctors error:", error);
+
+//         res.status(500).json({
+//             success: false,
+//             message: "Failed to fetch doctors"
+//         });
+//     }
+// });
+
+
+app.get("/api/doctors", async (req: Request, res: Response) => {
     try {
-        const result = await doctorsCollection.find().toArray();
-        res.send(result);
+        const { status } = req.query;
+
+        let filter: Record<string, any> = {};
+
+        // Public API: Only approved doctors
+        if (!status || status === "approved") {
+            filter = {
+                $or: [
+                    { status: "approved" },
+                    { status: { $exists: false } }
+                ]
+            };
+        }
+
+        // Admin can explicitly request all doctors
+        else if (status === "all") {
+            filter = {};
+        }
+
+        // Admin filters
+        else if (status === "pending" || status === "rejected") {
+            filter = { status };
+        }
+
+        else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid doctor status"
+            });
+        }
+
+        const result = await doctorsCollection
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        res.status(200).json(result);
+
     } catch (error: any) {
-        res.status(500).send({ success: false, message: error.message });
+        console.error("Fetch doctors error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch doctors"
+        });
     }
 });
+
+
 
 
 
