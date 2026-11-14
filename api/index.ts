@@ -1184,46 +1184,46 @@ app.patch("/api/nurses/approve/:id", async (req: Request, res: Response) => {
 
 
 // Reject Nurse
-// app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
+app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
 
-//         if (!ObjectId.isValid(id)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid nurse ID",
-//             });
-//         }
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid nurse ID",
+            });
+        }
 
-//         const result = await nursesCollection.updateOne(
-//             { _id: new ObjectId(id) },
-//             {
-//                 $set: {
-//                     status: "rejected",
-//                     updatedAt: new Date(),
-//                 },
-//             }
-//         );
+        const result = await nursesCollection.updateOne(
+            { _id: new ObjectId(id) },
+            {
+                $set: {
+                    status: "rejected",
+                    updatedAt: new Date(),
+                },
+            }
+        );
 
-//         if (result.matchedCount === 0) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Nurse not found",
-//             });
-//         }
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Nurse not found",
+            });
+        }
 
-//         res.json({
-//             success: true,
-//             message: "Nurse application rejected",
-//             data: result,
-//         });
-//     } catch (error: any) {
-//         res.status(500).json({
-//             success: false,
-//             message: error.message,
-//         });
-//     }
-// });
+        res.json({
+            success: true,
+            message: "Nurse application rejected",
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
 
 // Get Nurse by User ID
