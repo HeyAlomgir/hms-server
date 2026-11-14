@@ -1254,37 +1254,37 @@ app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
 
 
 // Get Single Approved Nurse
-// app.get("/api/nurses/:id", async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
+app.get("/api/nurses/:id", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
 
-//         if (!ObjectId.isValid(id)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid nurse ID",
-//             });
-//         }
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid nurse ID",
+            });
+        }
 
-//         const nurse = await nursesCollection.findOne({
-//             _id: new ObjectId(id),
-//             status: "approved",
-//         });
+        const nurse = await nursesCollection.findOne({
+            _id: new ObjectId(id),
+            status: "approved",
+        });
 
-//         if (!nurse) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Approved nurse not found",
-//             });
-//         }
+        if (!nurse) {
+            return res.status(404).json({
+                success: false,
+                message: "Approved nurse not found",
+            });
+        }
 
-//         res.json(nurse);
-//     } catch (error: any) {
-//         res.status(500).json({
-//             success: false,
-//             message: error.message,
-//         });
-//     }
-// });
+        res.json(nurse);
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
 
 // Delete Nurse
