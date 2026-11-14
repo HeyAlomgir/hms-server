@@ -1288,32 +1288,32 @@ app.get("/api/nurses/:id", async (req: Request, res: Response) => {
 
 
 // Delete Nurse
-// app.delete("/api/nurses/:id", async (req: Request, res: Response) => {
-//     try {
-//         const { id } = req.params;
+app.delete("/api/nurses/:id", async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
 
-//         if (!ObjectId.isValid(id)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid nurse ID",
-//             });
-//         }
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid nurse ID",
+            });
+        }
 
-//         const result = await nursesCollection.deleteOne({
-//             _id: new ObjectId(id),
-//         });
+        const result = await nursesCollection.deleteOne({
+            _id: new ObjectId(id),
+        });
 
-//         res.json({
-//             success: true,
-//             data: result,
-//         });
-//     } catch (error: any) {
-//         res.status(500).json({
-//             success: false,
-//             message: error.message,
-//         });
-//     }
-// });
+        res.json({
+            success: true,
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
 
 
