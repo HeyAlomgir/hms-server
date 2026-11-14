@@ -1227,30 +1227,30 @@ app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
 
 
 // Get Nurse by User ID
-// app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
-//     try {
-//         const { userId } = req.params;
+app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
 
-//         const nurse = await nursesCollection.findOne({ userId });
+        const nurse = await nursesCollection.findOne({ userId });
 
-//         if (!nurse) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "Nurse profile not found",
-//             });
-//         }
+        if (!nurse) {
+            return res.status(404).json({
+                success: false,
+                message: "Nurse profile not found",
+            });
+        }
 
-//         res.json({
-//             success: true,
-//             data: nurse,
-//         });
-//     } catch (error: any) {
-//         res.status(500).json({
-//             success: false,
-//             message: error.message,
-//         });
-//     }
-// });
+        res.json({
+            success: true,
+            data: nurse,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
 
 // Get Single Approved Nurse
