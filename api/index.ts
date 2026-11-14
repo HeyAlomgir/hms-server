@@ -1296,6 +1296,7 @@ app.get("/api/nurses/:id", async (req: Request, res: Response) => {
 
 
 
+
 // Update Nurse Profile
 app.patch("/api/nurses/update/:id", async (req: Request, res: Response) => {
     try {
@@ -1312,16 +1313,23 @@ app.patch("/api/nurses/update/:id", async (req: Request, res: Response) => {
 
         const {
             name,
+            qualification,
+            licenseNumber,
             specialization,
-            degree,
+            experience,
             description,
             image,
         } = req.body;
 
-        if (!name || !specialization || !degree) {
+        if (
+            !name?.trim() ||
+            !qualification?.trim() ||
+            !licenseNumber?.trim() ||
+            !specialization?.trim()
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Name, specialization and degree are required",
+                message: "Please provide all required profile information",
             });
         }
 
@@ -1332,9 +1340,11 @@ app.patch("/api/nurses/update/:id", async (req: Request, res: Response) => {
             },
             {
                 $set: {
-                    name,
-                    specialization,
-                    degree,
+                    name: name.trim(),
+                    qualification: qualification.trim(),
+                    licenseNumber: licenseNumber.trim(),
+                    specialization: specialization.trim(),
+                    experience: Number(experience) || 0,
                     description: description || "",
                     image: image || "",
                     updatedAt: new Date(),
@@ -1349,17 +1359,18 @@ app.patch("/api/nurses/update/:id", async (req: Request, res: Response) => {
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: "Nurse profile updated successfully",
         });
     } catch (error: any) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: error.message,
         });
     }
 });
+
 
 
 
