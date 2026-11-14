@@ -1106,38 +1106,38 @@ app.post("/api/nurses", async (req: Request, res: Response) => {
 
 // Get Nurses
 // Default: Only approved nurses
-// app.get("/api/nurses", async (req: Request, res: Response) => {
-//     try {
-//         const { status } = req.query;
+app.get("/api/nurses", async (req: Request, res: Response) => {
+    try {
+        const { status } = req.query;
 
-//         let filter: Record<string, any> = {};
+        let filter: Record<string, any> = {};
 
-//         if (!status || status === "approved") {
-//             filter = { status: "approved" };
-//         } else if (status === "all") {
-//             filter = {};
-//         } else if (status === "pending" || status === "rejected") {
-//             filter = { status };
-//         } else {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Invalid nurse status",
-//             });
-//         }
+        if (!status || status === "approved") {
+            filter = { status: "approved" };
+        } else if (status === "all") {
+            filter = {};
+        } else if (status === "pending" || status === "rejected") {
+            filter = { status };
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid nurse status",
+            });
+        }
 
-//         const result = await nursesCollection
-//             .find(filter)
-//             .sort({ createdAt: -1 })
-//             .toArray();
+        const result = await nursesCollection
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .toArray();
 
-//         res.status(200).json(result);
-//     } catch (error: any) {
-//         res.status(500).json({
-//             success: false,
-//             message: error.message,
-//         });
-//     }
-// });
+        res.status(200).json(result);
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
 
 
 // Approve Nurse
