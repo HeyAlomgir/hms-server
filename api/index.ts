@@ -1188,7 +1188,9 @@ app.patch("/api/nurses/approve/:id", async (req: Request, res: Response) => {
 // Reject Nurse
 app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -1231,7 +1233,9 @@ app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
 // Get Nurse by User ID
 app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
     try {
-        const { userId } = req.params;
+        const userId = Array.isArray(req.params.userId)
+            ? req.params.userId[0]
+            : req.params.userId;
 
         const nurse = await nursesCollection.findOne({ userId });
 
@@ -1258,7 +1262,9 @@ app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
 // Get Single Approved Nurse
 app.get("/api/nurses/:id", async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -1292,7 +1298,9 @@ app.get("/api/nurses/:id", async (req: Request, res: Response) => {
 // Delete Nurse
 app.delete("/api/nurses/:id", async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({
