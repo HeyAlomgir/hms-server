@@ -1295,6 +1295,74 @@ app.get("/api/nurses/:id", async (req: Request, res: Response) => {
 });
 
 
+
+// Update Nurse Profile
+app.patch("/api/nurses/update/:id", async (req: Request, res: Response) => {
+    try {
+        const id = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid nurse ID",
+            });
+        }
+
+        const {
+            name,
+            specialization,
+            degree,
+            description,
+            image,
+        } = req.body;
+
+        if (!name || !specialization || !degree) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, specialization and degree are required",
+            });
+        }
+
+        const result = await nursesCollection.updateOne(
+            {
+                _id: new ObjectId(id),
+                status: "approved",
+            },
+            {
+                $set: {
+                    name,
+                    specialization,
+                    degree,
+                    description: description || "",
+                    image: image || "",
+                    updatedAt: new Date(),
+                },
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Approved nurse profile not found",
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Nurse profile updated successfully",
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
+
+
+
 // Delete Nurse
 app.delete("/api/nurses/:id", async (req: Request, res: Response) => {
     try {
