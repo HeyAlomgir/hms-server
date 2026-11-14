@@ -37,6 +37,7 @@ let usersCollection: Collection;
 let reviewsCollection: Collection;
 let bookmarksCollection: Collection;
 let appointmentsCollection: Collection;
+let nursesCollection: Collection;
 
 // db connection function
 let isConnected = false;
@@ -53,7 +54,9 @@ async function connectDB() {
         usersCollection = db.collection("user");
         reviewsCollection = db.collection("reviews");
         bookmarksCollection = db.collection("bookmarks");
+        nursesCollection = db.collection("nurse");
         isConnected = true;
+
 
     } catch (error) {
         console.error("❌ MongoDB connection error:", error);
