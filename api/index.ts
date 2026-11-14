@@ -1055,6 +1055,271 @@ app.get("/api/testimonials", async (req: Request, res: Response) => {
 
 
 
+// ---------- NURSE APPLICATION ----------
+
+// Create Nurse Application
+app.post("/api/nurses", async (req: Request, res: Response) => {
+    try {
+        const nurse = req.body;
+
+        if (!nurse.name || !nurse.email || !nurse.userId) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email and userId are required",
+            });
+        }
+
+        // Prevent duplicate nurse applications
+        const existingNurse = await nursesCollection.findOne({
+            $or: [
+                { email: nurse.email },
+                { userId: nurse.userId },
+            ],
+        });
+
+        if (existingNurse) {
+            return res.status(409).json({
+                success: false,
+                message: "Nurse application already exists",
+            });
+        }
+
+        const result = await nursesCollection.insertOne({
+            ...nurse,
+            status: "pending",
+            createdAt: new Date(),
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Nurse application submitted successfully",
+            nurseId: result.insertedId,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});
+
+
+// Get Nurses
+// Default: Only approved nurses
+// app.get("/api/nurses", async (req: Request, res: Response) => {
+//     try {
+//         const { status } = req.query;
+
+//         let filter: Record<string, any> = {};
+
+//         if (!status || status === "approved") {
+//             filter = { status: "approved" };
+//         } else if (status === "all") {
+//             filter = {};
+//         } else if (status === "pending" || status === "rejected") {
+//             filter = { status };
+//         } else {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid nurse status",
+//             });
+//         }
+
+//         const result = await nursesCollection
+//             .find(filter)
+//             .sort({ createdAt: -1 })
+//             .toArray();
+
+//         res.status(200).json(result);
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+// Approve Nurse
+// app.patch("/api/nurses/approve/:id", async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+
+//         if (!ObjectId.isValid(id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid nurse ID",
+//             });
+//         }
+
+//         const result = await nursesCollection.updateOne(
+//             { _id: new ObjectId(id) },
+//             {
+//                 $set: {
+//                     status: "approved",
+//                     updatedAt: new Date(),
+//                 },
+//             }
+//         );
+
+//         if (result.matchedCount === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Nurse not found",
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             message: "Nurse approved successfully",
+//             data: result,
+//         });
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+// Reject Nurse
+// app.patch("/api/nurses/reject/:id", async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+
+//         if (!ObjectId.isValid(id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid nurse ID",
+//             });
+//         }
+
+//         const result = await nursesCollection.updateOne(
+//             { _id: new ObjectId(id) },
+//             {
+//                 $set: {
+//                     status: "rejected",
+//                     updatedAt: new Date(),
+//                 },
+//             }
+//         );
+
+//         if (result.matchedCount === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Nurse not found",
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             message: "Nurse application rejected",
+//             data: result,
+//         });
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+// Get Nurse by User ID
+// app.get("/api/nurses/by-user/:userId", async (req: Request, res: Response) => {
+//     try {
+//         const { userId } = req.params;
+
+//         const nurse = await nursesCollection.findOne({ userId });
+
+//         if (!nurse) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Nurse profile not found",
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             data: nurse,
+//         });
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+// Get Single Approved Nurse
+// app.get("/api/nurses/:id", async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+
+//         if (!ObjectId.isValid(id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid nurse ID",
+//             });
+//         }
+
+//         const nurse = await nursesCollection.findOne({
+//             _id: new ObjectId(id),
+//             status: "approved",
+//         });
+
+//         if (!nurse) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Approved nurse not found",
+//             });
+//         }
+
+//         res.json(nurse);
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+// Delete Nurse
+// app.delete("/api/nurses/:id", async (req: Request, res: Response) => {
+//     try {
+//         const { id } = req.params;
+
+//         if (!ObjectId.isValid(id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Invalid nurse ID",
+//             });
+//         }
+
+//         const result = await nursesCollection.deleteOne({
+//             _id: new ObjectId(id),
+//         });
+
+//         res.json({
+//             success: true,
+//             data: result,
+//         });
+//     } catch (error: any) {
+//         res.status(500).json({
+//             success: false,
+//             message: error.message,
+//         });
+//     }
+// });
+
+
+
+
+
+
 
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 5000;
