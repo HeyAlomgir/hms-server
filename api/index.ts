@@ -1143,7 +1143,9 @@ app.get("/api/nurses", async (req: Request, res: Response) => {
 // Approve Nurse
 app.patch("/api/nurses/approve/:id", async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Array.isArray(req.params.id)
+            ? req.params.id[0]
+            : req.params.id;
 
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({
